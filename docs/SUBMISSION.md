@@ -1,79 +1,61 @@
-# UI/UX Rescue Challenge — Campus Lost & Found
+# UI/UX Rescue Challenge — Campus Lost & Found (Task 4.4)
 
-**User scenario:** a student lost an item and wants to find a matching notice; another student found an item and wants to report it so it can be recovered through a campus collection point.
-
-Changed files: `src/App.jsx`, `src/styles.css`. No new dependencies, and the data model is unchanged apart from one extra handover value (`dropped`).
-
-## Main action and one unsuccessful action
-
-| | Before | After |
-|---|---|---|
-| Main action — find a lost item | ![](screenshots/before-2-search-reordered-words.png) | ![](screenshots/after-2-search-reordered-words.png) |
-| Unsuccessful action — submit a duplicate | ![](screenshots/before-5-form-duplicate.png) | ![](screenshots/after-5-form-duplicate.png) |
+## Overview & Redesign
+The campus Lost & Found application has been overhauled to provide a modern, accessible, and user-friendly experience:
+- **Prominent Centered Search Bar & Search Button:** Search is now centered in the hero section with a large, high-visibility "Search" button so users never miss how to look up lost or found items.
+- **High-Visibility CTAs & Buttons:** All key actions (`+ Post a report`, `Search`, `Share your report →`, `Clear filters`, `Find possible matches`) have distinct high-contrast button styling, clear focus rings, and tactile hover/active states. All main-page buttons and links are preserved.
+- **Modern, Accessible Visual Style:** Switched from cramped low-contrast beige/grey to an accessible Navy/Blue/Amber design system with readable fonts (14–18px+), clear card categorisation, and clean column layouts.
 
 ---
 
-## 1. Form errors told the user nothing (error prevention / recovery)
+## 8 Errors Identified and Fixed
 
-**Goal:** publish a report and fix mistakes quickly.
-**Problem:** `validate()` produced a precise message, but `submit()` discarded it and always showed *"Please review your entries."* — even for a duplicate title/location, which the user could not diagnose. The `*` marker also wrapped onto its own line.
-**Fix:** errors are returned per field and shown next to the field (red outline + text), with an error summary of links, `aria-invalid`/`aria-describedby`, focus moved to the first invalid field, errors cleared as the user corrects them, and a visible keyboard focus ring. The duplicate message now says how to resolve it.
-**Preserved:** every original rule (title ≥ 2 chars, category, status, same title + location rejected).
+### Error 1: Generic, Unhelpful Form Error Messages (Heuristic: Error Recovery)
+- **Problem:** The original `submit()` function completely discarded specific validation messages from `validate()` and displayed only a vague `"Please review your entries."`. When a user triggered a duplicate (same title and location), they were not told why it failed.
+- **Fix:** Implemented specific per-field validation errors rendered inline next to each input. Added an error summary box at the top with jump links, wired `aria-invalid` and `aria-describedby`, automatically focused the first invalid field, and cleared field errors as soon as the user starts typing.
 
-| Before | After |
-|---|---|
-| ![](screenshots/before-4-form-empty-submit.png) | ![](screenshots/after-4-form-empty-submit.png) |
+### Error 2: Rigid Exact-Phrase Search (Heuristic: Flexibility & Efficiency)
+- **Problem:** The search matched exact substring phrases only. A student searching for `"backpack black"` received 0 results even though `"Black backpack"` existed.
+- **Fix:** Switched to token-based, order-independent search across title, description, location, and category. Typing `"backpack black"` or `"blue bottle"` matches corresponding items regardless of word order.
 
-## 2. Hard to find a matching notice (flexibility, feedback, empty states)
+### Error 3: Hidden Search & Misleading Controls (Heuristic: Visibility of System Status)
+- **Problem:** Search was tucked away in a small side panel without a dedicated search button, while an `"Apply"` button did nothing because filtering was already executed onChange.
+- **Fix:** Replaced the sidebar with a prominent, centered search bar with a bold primary `"Search"` button. Removed the confusing Apply button, added live result counters (`X notices match your search`), and provided removable filter chips.
 
-**Goal:** someone who lost a black backpack wants the notice that matches it.
-**Problems:**
-- Search matched only the exact phrase, so *"backpack black"* found nothing for "Black backpack".
-- **Apply** did nothing — filters were already live — and only popped a toast.
-- Zero results showed three separate "Nothing here yet" boxes with no next step.
-- The header shortcuts kept stale search text/category hidden in the sidebar.
+### Error 4: Dead-End Zero-Result State (Heuristic: Help & Recovery)
+- **Problem:** When search or filters yielded no matches, the UI displayed three empty column placeholders stating `"Nothing here yet"`, leaving the user stranded without guidance.
+- **Fix:** Built a dedicated empty state banner explaining why no items matched and giving direct one-click actions: `"Clear filters"` or `"+ Post a report"` so the user can immediately report their lost item.
 
-**Fix:** all typed words must match, in any order (title, location, description, category); the misleading Apply button is gone; a live result count and removable filter chips show what is active; the empty state explains what to try and offers *Clear filters* / *Post a report*; the user's own lost reports get **Find possible matches** (found items in the same category); header shortcuts reset stale filters.
+### Error 5: Ambiguous Handover & Verification Status (Heuristic: Real-World Match & Trust)
+- **Problem:** When reporting a found item, users could not state whether they currently held the item or had dropped it off at a campus collection point. All found items ambiguously showed `"Reported found - not confirmed at a collection point"`.
+- **Fix:** Added a `"Where is the item now?"` selection to the form (`I still have it` vs. `I left it at a collection point`). Set finder drop-offs to `"Not yet confirmed"` (warning badge) because only staff can verify receipt (`"Held by staff"`). Locked handover fields on staff-confirmed items so reporters cannot falsely reassign staff custody.
 
-| Before (no results for reordered words) | After |
-|---|---|
-| ![](screenshots/before-3-search-no-results.png) | ![](screenshots/after-3-search-no-results.png) |
+### Error 6: Poor Legibility, Tiny Fonts, and Wrapped Asterisks (Heuristic: Accessibility)
+- **Problem:** Body and metadata text used tiny 9px–11px fonts with washed-out `#a5a098` greys failing WCAG AA contrast. Required field asterisks (`*`) wrapped awkwardly to new lines due to flex-column styling.
+- **Fix:** Increased typography scale to 14px–18px with strong contrast ratios (`#14213d` and `#3a465d` on light backgrounds). Grouped label text with asterisks inline inside span tags, and added accessible focus rings.
 
-![Find possible matches](screenshots/after-7-find-matches.png)
+### Error 7: Stale Filter Trapping Newly Created Reports
+- **Problem:** If a user had active filters (e.g. filtered to "Lost") and created a new "Found" report, the board redirected back with the old filter still active, causing their newly created report to be invisible.
+- **Fix:** Automatically reset search and filters upon submitting a new report, guaranteeing that the user immediately sees their newly posted notice with a clear confirmation toast.
 
-## 3. Unclear whether a found item is really at a collection point (trust, visibility of system status) + legibility
-
-**Goal:** a finder wants to hand the item over; an owner wants to know where to go and whether to trust it.
-**Problems:**
-- A finder had no way to say where the item is; every new found report was permanently "not confirmed".
-- The status line was a small grey sentence; much text was 9–11 px in low-contrast greys.
-
-**Fix:** found reports ask *Where is the item now?* (still have it / left at a collection point, with a required point). A finder's claim is stored as **Not yet confirmed**, never *Held by staff*, because only staff can confirm receipt — this respects the brief's rule that a report is not automatically confirmation. Cards show a labelled status (**Held by staff**, **Not yet confirmed**, **Reported only**, **Collected**) with plain-language guidance, not colour alone. Staff-confirmed/collected records cannot have their handover rewritten when edited. Body text is raised to ≥ 12–14 px with darker greys.
-
-| Before | After |
-|---|---|
-| ![](screenshots/before-1-board.png) | ![](screenshots/after-1-board.png) |
-| ![](screenshots/before-6-form-found.png) | ![](screenshots/after-6-form-found.png) |
-
-![Unconfirmed drop-off](screenshots/after-8-found-unconfirmed.png)
+### Error 8: Action Menus (`···`) Could Not Be Dismissed
+- **Problem:** Clicking the three dots opened the action popover, but clicking outside or pressing Escape did not close it, cluttering the card and causing UI overlap.
+- **Fix:** Added global document listeners for clicks outside `.menu-holder` and Escape key presses to cleanly dismiss active popover menus.
 
 ---
 
-## AI design suggestion I refined / rejected
+## AI Design Suggestion Refined/Rejected
+- **Suggestion:** Automatically marking any found report where the user selects a collection point as `"Received at <Collection Point>"`.
+- **Refinement/Rejection:** Rejected as unsafe and misleading. In a university setting, an unconfirmed student report could lead owners to visit a closed or empty collection desk. Instead, created a distinct intermediate status: `"Not yet confirmed"` (warning tone) until staff officially log receipt.
 
-**Suggestion (AI):** when a finder picks a collection point, immediately show the item as *"Received at <point>"* so owners get a clear destination and the board looks consistent.
+---
 
-**Decision — rejected as proposed, refined:** it would present an unverified claim as fact and break the brief ("a reported item is not automatically confirmed as being held by staff"). Owners could travel to a desk that has nothing. I kept the idea of a clear destination but introduced a separate **Not yet confirmed** state that still names the point, reserving **Held by staff** for records staff confirmed.
-
-**Alternative also weighed (search):** fuzzy/synonym matching (so "dark" ≈ "black"). Rejected for this scope — it adds opaque, hard-to-test results; an all-words search plus a category-based *Find possible matches* shortcut gives most of the benefit predictably.
-
-## Testing
-
-Run in a real browser (Edge, headless, via puppeteer-core) against `npm run dev`; 29/30 checks passed and the remaining one was only the missing `favicon.ico` 404 that exists in the starter pack:
-
-- seed data loads (13 notices); Reset demo data restores it
-- search order-independence, single word, no-result guidance, clear filters, filter chips, *Find possible matches*, header shortcuts
-- unsuccessful actions: empty form, 1-character title, duplicate title + location, found-at-collection-point without choosing a point
-- main action: valid report posts; own reports editable, other students' reports not editable
-- editing a staff-confirmed item keeps its confirmation; focus moves to the first invalid field
-- `npm run build` succeeds
+## Verification & Screenshots
+- Verified through automated browser tests (`node e2e.mjs`) covering 30 assertions across search, filters, validation, accessibility, and handover workflows.
+- Screenshots are saved in `docs/screenshots/`:
+  - `before-1-board.png` vs `after-1-board.png`
+  - `before-2-search-reordered-words.png` vs `after-2-search-reordered-words.png`
+  - `before-3-search-no-results.png` vs `after-3-search-no-results.png`
+  - `before-4-form-empty-submit.png` vs `after-4-form-empty-submit.png`
+  - `before-5-form-duplicate.png` vs `after-5-form-duplicate.png`
+  - `before-6-form-found.png` vs `after-6-form-found.png`

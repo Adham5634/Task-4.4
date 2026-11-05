@@ -3,3 +3,11 @@
 
 /* The deliberately simple notice cards only display receipt metadata; they do not implement an ownership-claim workflow. */
 .handover-note{font-size:10px;line-height:1.45;color:#746e61;margin:2px 0 10px;padding-top:4px;}
+
+/* --- Fix 1: specific, per-field form errors --- */
+.form-paper input[aria-invalid="true"],.form-paper select[aria-invalid="true"]{border-color:#b3382a;box-shadow:0 0 0 1px #b3382a}
+.field-error{color:#a12f20;font-size:13px;font-weight:600;line-height:1.4}
+.form-error{font-size:14px;color:#8f2a1c;background:#fff0ee;border-left:4px solid #b3382a;padding:12px 14px}
+.form-error ul{margin:6px 0 0;padding-left:20px}
+.form-error a{color:inherit;text-decoration:underline}
+.form-paper input:focus-visible,.form-paper select:focus-visible,.form-paper textarea:focus-visible,.filterbox input:focus-visible,.filterbox select:focus-visible,button:focus-visible{outline:3px solid #1f5fbf;outline-offset:2px}

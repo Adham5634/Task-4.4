@@ -20,7 +20,19 @@ const seed=[
 ];
 const categories=['all','electronics','clothing','documents','accessories','other'];
 const statuses=['lost','found','claimed'];
-const clean={title:'',category:'',status:'',location:'',description:''};
+// Fictional collection points that appear in the example records.
+const collectionPoints=['Campus Security Desk','Student Services Office','Library Reception'];
+// holding/point are form-only helpers describing where a found item is now.
+const clean={title:'',category:'',status:'',location:'',description:'',holding:'have',point:''};
+// Once staff have confirmed receipt (or the owner collected it), the finder can no longer rewrite where it is.
+const handoverEditable=ex=>!ex||!['received','released'].includes(ex.handoverStatus);
+// What each handover state means for someone who is trying to recover an item.
+function handoverInfo(item){
+  if(item.handoverStatus==='released')return{tone:'done',label:'Collected',text:'The owner collected this item.'};
+  if(item.handoverStatus==='received'&&item.collectionPoint)return{tone:'ok',label:'Held by staff',text:`Confirmed at ${item.collectionPoint}. Ownership is verified before it is released.`};
+  if(item.handoverStatus==='dropped'&&item.collectionPoint)return{tone:'warn',label:'Not yet confirmed',text:`The finder says it was left at ${item.collectionPoint}. Staff have not confirmed receiving it.`};
+  return{tone:'warn',label:'Reported only',text:'Nobody has confirmed this item is at a collection point. Do not assume staff are holding it.'};
+}
 function getSaved(){try{const s=JSON.parse(localStorage.getItem(STORE));return Array.isArray(s)?s:seed;}catch{return seed;}}
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 
@@ -34,10 +46,12 @@ function validate(f,arr,id){
   if(!statuses.includes(f.status))errors.status='Choose lost, found or claimed.';
   if(!errors.title&&arr.some(r=>r.id!==id&&r.title.toLowerCase()===f.title.trim().toLowerCase()&&(r.location||'').toLowerCase()===(f.location||'').trim().toLowerCase()))
     errors.title='An item with the same title has already been reported at this location. Change the title or the location.';
+  if(f.status==='found'&&handoverEditable(arr.find(r=>r.id===id))&&f.holding==='dropped'&&!collectionPoints.includes(f.point))
+    errors.point='Choose the collection point where you left the item.';
   return errors;
 }
 // Order matches the visual order of the form so focus lands on the first problem.
-const fieldOrder=['title','status','category'];
+const fieldOrder=['title','status','category','point'];
 
 export default function App(){
   const [items,setItems]=useState(getSaved);
@@ -71,7 +85,7 @@ export default function App(){
   function edit(row){
     if(row.owner!=='you')return;
     setCurrent(row.id);
-    setForm({title:row.title,category:row.category,status:row.status,location:row.location,description:row.description});
+    setForm({title:row.title,category:row.category,status:row.status,location:row.location,description:row.description,holding:row.handoverStatus==='dropped'?'dropped':'have',point:row.handoverStatus==='dropped'?(row.collectionPoint||''):''});
     setOpenMenu(null);setErrors({});setPage('form');
   }
   // Update one field and clear only that field's error once the user starts fixing it.
@@ -89,7 +103,14 @@ export default function App(){
       setTimeout(()=>document.getElementById(`field-${first}`)?.focus(),0);
       return;
     }
-    const d={...form,title:form.title.trim(),location:form.location.trim(),description:form.description.trim(),owner:'you',created:'Today',emoji:current?items.find(x=>x.id===current)?.emoji:'📌',...(current?{}:{collectionPoint:'',handoverStatus:'reported'})};
+    const {holding,point,...fields}=form;
+    const existing=current?items.find(x=>x.id===current):null;
+    // A finder's claim to have left the item somewhere is stored as 'dropped', never 'received':
+    // only staff can confirm receipt. Confirmed/released records are left untouched when editing.
+    const handover=handoverEditable(existing)
+      ?(form.status==='found'&&holding==='dropped'?{collectionPoint:point,handoverStatus:'dropped'}:{collectionPoint:'',handoverStatus:'reported'})
+      :{};
+    const d={...fields,title:form.title.trim(),location:form.location.trim(),description:form.description.trim(),owner:'you',created:'Today',emoji:current?existing?.emoji:'📌',...handover};
     if(current){setItems(items.map(x=>x.id===current?{...x,...d}:x));setMessage('Report updated.');}
     else{setItems([{id:`f-${Date.now()}`,...d},...items]);setMessage('Your report has been posted.');}
     setPage('board');setCurrent(null);
@@ -112,13 +133,20 @@ export default function App(){
   {page==='board'?<main className="workspace"><aside className="filters"><p className="kicker">YOUR NOTICEBOARD</p><h1>Lost something?<br/><em>You're in the right place.</em></h1><p className="intro">Browse what the campus community has shared or post what you've lost or found.</p><div className="filterbox"><h3>Browse reports</h3><label>Search items<input value={q} onChange={e=>setQ(e.target.value)} placeholder="What are you looking for?"/></label><label>Item category<select value={cat} onChange={e=>setCat(e.target.value)}><option value="all">All categories</option>{categories.slice(1).map(c=><option key={c} value={c}>{cap(c)}</option>)}</select></label><label>Report status<select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}><option value="all">All statuses</option>{statuses.map(s=><option key={s} value={s}>{cap(s)}</option>)}</select></label><div className="filterbuttons"><button onClick={clearFilters} disabled={!filtersActive}>Clear filters</button></div></div><div className="side-message"><span>📍</span><strong>Lost or found something?</strong><p>Every report gets us a little closer.</p><button onClick={create}>Share your report →</button></div><button className="reset" onClick={reset}>Reset demo data</button></aside>
    <section className="board"><div className="board-top"><div><p className="kicker">CAMPUS COMMUNITY</p><h2>Latest notices <span>({filtered.length})</span></h2></div><span className="time-note">Updated today</span></div>{message&&<div className="message" role="status">{message}<button onClick={()=>setMessage('')}>✕</button></div>}
     <div className="result-bar"><p className="result-summary" role="status" aria-live="polite">{filtered.length===1?'1 notice':`${filtered.length} notices`}{filtersActive?' match your search and filters':' on the noticeboard'}</p>{chips.length>0&&<ul className="chips">{chips.map(ch=><li key={ch.label}><button onClick={ch.clear} aria-label={`Remove filter ${ch.label}`}>{ch.label} <span aria-hidden="true">✕</span></button></li>)}</ul>}</div>
-    {filtered.length===0?<div className="no-results"><strong>No notices match{tokens.length>0?` “${q.trim()}”`:' these filters'}.</strong><p>Try fewer or different words, or remove a filter. If you still can't find it, post a report so someone can match it with theirs.</p><div className="no-results-actions">{filtersActive&&<button onClick={clearFilters}>Clear filters</button>}<button className="report-button" onClick={create}>+ Post a report</button></div></div>:<div className="board-grid">{[{key:'lost',title:'LOST',sub:'Searching for these things',icon:'↗'},{key:'found',title:'FOUND',sub:'Looking for the owners',icon:'⌁'},{key:'claimed',title:'CLAIMED',sub:'Back where they belong',icon:'✓'}].map(col=><div className="board-column" key={col.key}><div className="column-head"><span className={'col-icon '+col.key}>{col.icon}</span><div><strong>{col.title}</strong><small>{col.sub}</small></div><span className="col-count">{filtered.filter(r=>r.status===col.key).length}</span></div><div className="sticky-list">{filtered.filter(r=>r.status===col.key).map((item,i)=><article className="sticky" key={item.id}><div className="sticky-top"><span>{item.category}</span><div className="menu-holder"><button className="menu" onClick={()=>setOpenMenu(openMenu===item.id?null:item.id)} aria-label={`Actions for ${item.title}`}>···</button>{openMenu===item.id&&<div className="menu-popup">{item.owner==='you'?<button onClick={()=>edit(item)}>Edit your report</button>:<span>Reported by another student</span>}</div>}</div></div><div className="sticky-emoji">{item.emoji}</div><h3>{item.title}</h3><p>{item.description||'No additional description.'}</p>{item.status==='lost'&&item.owner==='you'&&<button className="match-button" onClick={()=>findMatches(item)}>Find possible matches</button>}{item.status!=='lost'&&<div className="handover-note">{item.handoverStatus==='received'&&item.collectionPoint?`Received at ${item.collectionPoint}`:item.handoverStatus==='released'?'Collected by owner':'Reported found - not confirmed at a collection point'}</div>}<div className="sticky-bottom"><span>⌖ {item.location||'Location not provided'}</span><small>{item.created}</small></div></article>)}{filtered.every(x=>x.status!==col.key)&&<div className="empty-column">Nothing here yet</div>}</div></div>)}</div>}
+    {filtered.length===0?<div className="no-results"><strong>No notices match{tokens.length>0?` “${q.trim()}”`:' these filters'}.</strong><p>Try fewer or different words, or remove a filter. If you still can't find it, post a report so someone can match it with theirs.</p><div className="no-results-actions">{filtersActive&&<button onClick={clearFilters}>Clear filters</button>}<button className="report-button" onClick={create}>+ Post a report</button></div></div>:<div className="board-grid">{[{key:'lost',title:'LOST',sub:'Searching for these things',icon:'↗'},{key:'found',title:'FOUND',sub:'Looking for the owners',icon:'⌁'},{key:'claimed',title:'CLAIMED',sub:'Back where they belong',icon:'✓'}].map(col=><div className="board-column" key={col.key}><div className="column-head"><span className={'col-icon '+col.key}>{col.icon}</span><div><strong>{col.title}</strong><small>{col.sub}</small></div><span className="col-count">{filtered.filter(r=>r.status===col.key).length}</span></div><div className="sticky-list">{filtered.filter(r=>r.status===col.key).map((item,i)=><article className="sticky" key={item.id}><div className="sticky-top"><span>{item.category}</span><div className="menu-holder"><button className="menu" onClick={()=>setOpenMenu(openMenu===item.id?null:item.id)} aria-label={`Actions for ${item.title}`}>···</button>{openMenu===item.id&&<div className="menu-popup">{item.owner==='you'?<button onClick={()=>edit(item)}>Edit your report</button>:<span>Reported by another student</span>}</div>}</div></div><div className="sticky-emoji">{item.emoji}</div><h3>{item.title}</h3><p>{item.description||'No additional description.'}</p>{item.status==='lost'&&item.owner==='you'&&<button className="match-button" onClick={()=>findMatches(item)}>Find possible matches</button>}{item.status!=='lost'&&(()=>{const h=handoverInfo(item);return <div className={`handover-note ${h.tone}`}><strong>{h.label}</strong> {h.text}</div>;})()}<div className="sticky-bottom"><span>⌖ {item.location||'Location not provided'}</span><small>{item.created}</small></div></article>)}{filtered.every(x=>x.status!==col.key)&&<div className="empty-column">Nothing here yet</div>}</div></div>)}</div>}
    </section></main>:<main className="report-page"><div className="crumbs"><button onClick={()=>setPage('board')}>← Noticeboard</button><span>/</span><span>Report an item</span></div><div className="report-layout"><div className="report-intro"><span className="seal">✺</span><p className="kicker">HELP THE COMMUNITY</p><h1>{current?'Update your report':'Tell us what happened.'}</h1><p>Small details can help someone recognize their belongings.</p><div className="paper-note">Your report will appear on the public campus noticeboard with the details you provide.</div></div><section className="form-paper"><header><p>NEW NOTICE / FORM 01</p><h2>{current?'Edit report':'Report an item'}</h2></header>
    <form onSubmit={submit} noValidate>
     {errorList.length>0&&<div className="form-error" role="alert"><strong>{errorList.length===1?'1 problem needs fixing:':`${errorList.length} problems need fixing:`}</strong><ul>{errorList.map(k=><li key={k}><a href={`#field-${k}`} onClick={ev=>{ev.preventDefault();document.getElementById(`field-${k}`)?.focus();}}>{errors[k]}</a></li>)}</ul></div>}
     <label><span>Item title <b>*</b></span><input {...fieldProps('title')} value={form.title} onChange={e=>setField('title',e.target.value)} placeholder="e.g., Black backpack"/>{fieldError('title')}</label>
     <label><span>Status <b>*</b></span><select {...fieldProps('status')} value={form.status} onChange={e=>setField('status',e.target.value)}><option value="">Choose one</option>{statuses.map(s=><option key={s} value={s}>{cap(s)}</option>)}</select>{fieldError('status')}</label>
     <label><span>Category <b>*</b></span><select {...fieldProps('category')} value={form.category} onChange={e=>setField('category',e.target.value)}><option value="">Select item category</option>{categories.slice(1).map(s=><option key={s} value={s}>{cap(s)}</option>)}</select>{fieldError('category')}</label>
+    {form.status==='found'&&(handoverEditable(current?items.find(x=>x.id===current):null)
+      ?<fieldset className="handover-fieldset"><legend>Where is the item now?</legend>
+        <label className="radio"><input type="radio" name="holding" checked={form.holding==='have'} onChange={()=>setField('holding','have')}/><span>I still have it<small>It will be shown as “Reported only”.</small></span></label>
+        <label className="radio"><input type="radio" name="holding" checked={form.holding==='dropped'} onChange={()=>setField('holding','dropped')}/><span>I left it at a collection point<small>Shown as “Not yet confirmed” until staff confirm they received it.</small></span></label>
+        {form.holding==='dropped'&&<label><span>Collection point <b>*</b></span><select {...fieldProps('point')} value={form.point} onChange={e=>setField('point',e.target.value)}><option value="">Choose a collection point</option>{collectionPoints.map(p=><option key={p} value={p}>{p}</option>)}</select>{fieldError('point')}</label>}
+      </fieldset>
+      :<div className="handover-locked">Staff have already handled this item, so where it is held can no longer be changed here.</div>)}
     <label>Last known location<input value={form.location} onChange={e=>setField('location',e.target.value)} placeholder="Location (optional)"/></label>
     <label>More details<textarea rows="6" value={form.description} onChange={e=>setField('description',e.target.value)} placeholder="Describe your item"/></label>
     <div className="form-actions"><button type="button" onClick={()=>setPage('board')}>Go back</button><button className="report-button" type="submit">{current?'Save report':'Publish notice'}</button></div>

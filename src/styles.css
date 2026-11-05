@@ -26,3 +26,45 @@
 .no-results-actions button:not(.report-button){border:1px solid #cbc7ba;background:#fff;border-radius:5px;padding:12px 18px;font-size:13px;font-weight:700}
 .match-button{display:block;width:100%;margin:0 0 12px;border:1px solid #2f3a42;background:#fff;border-radius:5px;padding:9px 10px;font-size:13px;font-weight:700;color:#262c30}
 .match-button:hover{background:#262c30;color:#fff}
+
+/* --- Fix 3a: handover status that says what it means (not colour alone) --- */
+.sticky .handover-note{font-size:13px;line-height:1.5;color:#3d3a33;margin:2px 0 12px;padding:8px 10px;border-left:4px solid #8a8577;background:#ffffffa6;border-radius:2px}
+.handover-note strong{display:block;font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+.handover-note.ok{border-left-color:#2e7d4f}.handover-note.ok strong{color:#1f5f3a}
+.handover-note.warn{border-left-color:#b36b00}.handover-note.warn strong{color:#8a5200}
+.handover-note.done{border-left-color:#4a6fa5}.handover-note.done strong{color:#2f4f80}
+.handover-fieldset{border:1px solid #e0d9c4;border-radius:4px;margin:0 0 19px;padding:14px 16px 4px;min-width:0}
+.handover-fieldset legend{font-size:14px;font-weight:700;color:#3d403c;padding:0 6px}
+.form-paper label.radio{flex-direction:row;align-items:flex-start;gap:10px;font-weight:600;margin-bottom:14px}
+.form-paper label.radio input{width:auto;padding:0;margin-top:3px;accent-color:#262c30}
+.form-paper label.radio span{display:flex;flex-direction:column;gap:2px;font-size:14px}
+.form-paper label.radio small{font-size:13px;font-weight:400;color:#5b574f}
+.handover-locked{font-size:13px;color:#5b574f;background:#f5f1e4;border-radius:4px;padding:10px 12px;margin-bottom:19px}
+
+/* --- Fix 3b: legibility. Body copy was 9-11px in low-contrast greys. --- */
+.kicker{color:#9a5a24;font-size:12px}
+.intro{font-size:14px;color:#55514a}
+.filterbox label{font-size:13px;color:#4a4943}
+.filterbox input,.filterbox select{font-size:14px;color:#2b2f33}
+.filterbuttons button{font-size:13px}
+.side-message strong{font-size:14px}.side-message p{font-size:13px;color:#6b5230}.side-message button{font-size:13px}
+.reset{font-size:13px;color:#6f6a62}
+.time-note{font-size:13px;color:#6f6657}
+.board-top h2 span{color:#7a6e55}
+.column-head strong{font-size:14px}.column-head small{font-size:12px;color:#625d54}.col-count{font-size:14px;color:#625d54}
+.sticky-top{font-size:11px;color:#6f5f35}
+.sticky p{font-size:13px;line-height:1.55;color:#4f4a41}
+.sticky h3{font-size:17px}
+.sticky-bottom{font-size:12px;color:#5f5238}
+.menu-popup button,.menu-popup span{font-size:13px}.menu-popup span{color:#5b574f}
+.empty-column{font-size:13px;color:#6f6247}
+.header-links button{font-size:13px;color:#4a3f1b}.report-button{font-size:13px}
+.ruleline{font-size:12px}.ruleline span:last-child{color:#d6d9d6}
+.crumbs{font-size:13px;color:#675e4c}.crumbs button{color:#4a463d}
+.report-intro>p:not(.kicker){font-size:15px;color:#625a49}
+.paper-note{font-size:13px;color:#675e4c}
+.form-paper header p{font-size:12px;color:#7d6a45}
+.form-paper label{font-size:14px;color:#33362f}
+.form-paper input,.form-paper select,.form-paper textarea{font-size:14px;color:#2b2f33}
+.form-actions>button:first-child{font-size:14px}
+.message{font-size:14px}.pagefooter{font-size:13px;color:#5f5a52}
